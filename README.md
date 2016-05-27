@@ -124,7 +124,7 @@ production:
   token:   <%= ENV['WECHAT_TOKEN'] %>
   access_token: <%= ENV['WECHAT_ACCESS_TOKEN'] %>
   jsapi_ticket: <%= ENV['WECHAT_JSAPI_TICKET'] %>
-  oauth2_cookie_duration: <%= ENV['WECHAT_OAUTH2_COOKIE_DURATION'] %>
+  oauth2_cookie_duration: <%= ENV['WECHAT_OAUTH2_COOKIE_DURATION'] %> # seconds
 
 development:
   <<: *default
@@ -302,6 +302,7 @@ Wechat commands:
   wechat qrcode_create_limit_scene [SCENE_ID_OR_STR]       # 请求永久二维码
   wechat qrcode_create_scene [SCENE_ID, EXPIRE_SECONDS]    # 请求临时二维码
   wechat qrcode_download [TICKET, QR_CODE_PIC_PATH]        # 通过ticket下载二维码
+  wechat short_url [LONG_URL]                              # 长链接转短链接
   wechat template_message [OPENID, TEMPLATE_YAML_PATH]     # 模板消息接口
   wechat user [OPEN_ID]                                    # 获取用户基本信息
   wechat user_batchget [OPEN_ID_LIST]                      # 批量获取用户基本信息  
@@ -444,7 +445,7 @@ Caution: make sure you having management privilege for those application， othe
 ##### Sent custom news
 
 
-Sending custom_news should also defined as a yaml file, like `articles.yaml`
+Sending custom_news should also defined as a yaml file, like `articles.yml`
 
 ```
 articles:
@@ -494,6 +495,20 @@ After that, can running command:
 
 ```
 $ wechat template_message oCfEht9oM*********** template.yml
+```
+
+In code:
+
+```ruby
+template = YAML.load(File.read(template_yaml_path)).symbolize_keys
+Wechat.api.template_message_send Wechat::Message.to(openid).template(template)
+```
+
+If using wechat_api or wechat_responder in Controller, can alse use wechat as shortcut(Support multi account):
+
+```ruby
+template = YAML.load(File.read(template_yaml_path)).symbolize_keys
+wechat.template_message_send Wechat::Message.to(openid).template(template)
 ```
 
 ## wechat_api - Rails Controller Wechat API
@@ -606,7 +621,7 @@ class WechatsController < ActionController::Base
 
   # When user sent location
   on :location do |request|
-    request.reply.text("Latitude: #{message[:Latitude]} Longitude: #{message[:Longitude]} Precision: #{message[:Precision]}")
+    request.reply.text("Latitude: #{request[:Latitude]} Longitude: #{request[:Longitude]} Precision: #{request[:Precision]}")
   end
 
   on :event, with: 'unsubscribe' do |request|

@@ -114,7 +114,7 @@ production:
   token:   <%= ENV['WECHAT_TOKEN'] %>
   access_token: <%= ENV['WECHAT_ACCESS_TOKEN'] %>
   jsapi_ticket: <%= ENV['WECHAT_JSAPI_TICKET'] %>
-  oauth2_cookie_duration: <%= ENV['WECHAT_OAUTH2_COOKIE_DURATION'] %>
+  oauth2_cookie_duration: <%= ENV['WECHAT_OAUTH2_COOKIE_DURATION'] %> # seconds
 
 development:
   <<: *default
@@ -286,6 +286,7 @@ Wechat commands:
   wechat qrcode_create_limit_scene [SCENE_ID_OR_STR]       # 请求永久二维码
   wechat qrcode_create_scene [SCENE_ID, EXPIRE_SECONDS]    # 请求临时二维码
   wechat qrcode_download [TICKET, QR_CODE_PIC_PATH]        # 通过ticket下载二维码
+  wechat short_url [LONG_URL]                              # 长链接转短链接
   wechat template_message [OPENID, TEMPLATE_YAML_PATH]     # 模板消息接口
   wechat user [OPEN_ID]                                    # 获取用户基本信息
   wechat user_batchget [OPEN_ID_LIST]                      # 批量获取用户基本信息  
@@ -481,6 +482,20 @@ template:
 $ wechat template_message oCfEht9oM*********** template.yml
 ```
 
+在代码中可以这样使用：
+
+```ruby
+template = YAML.load(File.read(template_yaml_path)).symbolize_keys
+Wechat.api.template_message_send Wechat::Message.to(openid).template(template)
+```
+
+若在Controller中使用wechat_api或者wechat_responder，可以使用wechat：
+
+```ruby
+template = YAML.load(File.read(template_yaml_path)).symbolize_keys
+wechat.template_message_send Wechat::Message.to(openid).template(template)
+```
+
 ## wechat_api - Rails Controller Wechat API
 
 虽然用户可以随时通过`Wechat.api`在任意代码中访问wechat的API功能，但是更推荐的做法是仅在controller中，通过引入`wechat_api`，使用`wechat`调用API功能，不仅因为这样是支持多个微信公众号的必然要求，而且也避免了在模型层内过多引入微信相关代码。
@@ -591,7 +606,7 @@ class WechatsController < ActionController::Base
 
   # 处理上报地理位置事件
   on :location do |request|
-    request.reply.text("Latitude: #{message[:Latitude]} Longitude: #{message[:Longitude]} Precision: #{message[:Precision]}")
+    request.reply.text("Latitude: #{request[:Latitude]} Longitude: #{request[:Longitude]} Precision: #{request[:Precision]}")
   end
 
   # 当用户取消关注订阅
